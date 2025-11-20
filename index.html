@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal Downloader 2025</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
+        input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        .btn-group { display: flex; gap: 10px; }
+        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
+        .btn-video { background-color: #007bff; color: white; }
+        .btn-audio { background-color: #28a745; color: white; }
+        button:hover { opacity: 0.9; }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        #status { margin-top: 15px; font-size: 14px; color: #555; text-align: left; white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 6px; display: none; max-height: 150px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Download Reels & TikTok</h2>
+        <input type="text" id="urlInput" placeholder="Paste Facebook/TikTok link here..." autocomplete="off">
+        <div class="btn-group">
+            <button class="btn-video" onclick="startDownload('video')">Download Video</button>
+            <button class="btn-audio" onclick="startDownload('audio')">Download Audio</button>
+        </div>
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function log(message) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.style.display = 'block';
+            const time = new Date().toLocaleTimeString();
+            statusDiv.innerText = `[${time}] ${message}\n` + statusDiv.innerText;
+        }
+
+        async function startDownload(type) {
+            const url = document.getElementById('urlInput').value.trim();
+            if (!url) return alert('Please enter a link first!');
+
+            const btnVideo = document.querySelector('.btn-video');
+            const btnAudio = document.querySelector('.btn-audio');
+            
+            btnVideo.disabled = true;
+            btnAudio.disabled = true;
+            log(`Requesting ${type} download...`);
+            log(`Target: ${url}`);
+
+            try {
+                const endpoint = `/download?url=${encodeURIComponent(url)}&type=${type}`;
+                
+                log("Connecting to server...");
+                const response = await fetch(endpoint);
+
+                if (!response.ok) throw new Error("Server error or invalid link.");
+
+                log("Stream started. Downloading...");
+
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.download = type === 'audio' ? 'audio.mp3' : 'video.mp4';
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(downloadUrl);
+
+                log("Download complete!");
+            } catch (error) {
+                log(`Error: ${error.message}`);
+            } finally {
+                btnVideo.disabled = false;
+                btnAudio.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
