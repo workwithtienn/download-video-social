@@ -1,189 +1,182 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Media Downloader 2025</title>
+    <title>Fast Downloader 2025</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --text: #1e293b;
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            background: white;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-            width: 100%;
-            max-width: 500px;
-        }
-        h1 { text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem; }
-        .input-group { display: flex; gap: 10px; margin-bottom: 1rem; }
-        input {
-            flex: 1;
-            padding: 12px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-            outline: none;
-        }
-        input:focus { border-color: var(--primary); }
-        button {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 600;
-            transition: opacity 0.2s;
-        }
-        button:hover { opacity: 0.9; }
-        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .card { background: white; padding: 30px; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 450px; text-align: center; }
+        h2 { margin: 0 0 20px; color: #333; }
+        .input-box { position: relative; margin-bottom: 20px; }
+        input { width: 100%; padding: 14px 50px 14px 15px; border: 2px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; transition: 0.3s; }
+        input:focus { border-color: #007bff; outline: none; }
+        .paste-btn { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); border: none; background: transparent; cursor: pointer; color: #666; padding: 10px; }
         
-        .options {
-            display: none;
-            flex-direction: column;
-            gap: 10px;
-            margin-top: 1rem;
-            padding-top: 1rem;
-            border-top: 1px solid #e2e8f0;
-        }
-        .btn-download {
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-        .btn-video { background: #059669; }
-        .btn-audio { background: #d97706; }
+        .btn { width: 100%; padding: 14px; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 10px; }
+        .btn-check { background: #007bff; color: white; }
+        .btn-check:hover { background: #0056b3; }
+        .btn-dl-video { background: #10b981; color: white; display: none; } /* Hidden default */
+        .btn-dl-audio { background: #f59e0b; color: white; display: none; } /* Hidden default */
+        
+        .preview-area { margin-bottom: 20px; display: none; animation: fadeIn 0.5s; }
+        .preview-area img { width: 100%; border-radius: 10px; max-height: 250px; object-fit: cover; }
+        .preview-title { font-size: 14px; margin-top: 10px; color: #555; font-weight: 600; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
-        #logs {
-            margin-top: 1.5rem;
-            background: #1e293b;
-            color: #4ade80;
-            padding: 1rem;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.85rem;
-            height: 150px;
-            overflow-y: auto;
-            white-space: pre-wrap;
-        }
-        .preview {
-            margin-bottom: 1rem;
-            text-align: center;
-            display: none;
-        }
-        .preview img {
-            max-width: 100%;
-            border-radius: 8px;
-            max-height: 200px;
-            object-fit: cover;
-        }
-        .preview h3 { font-size: 1rem; margin: 10px 0; }
+        .loader { border: 3px solid #f3f3f3; border-radius: 50%; border-top: 3px solid #007bff; width: 20px; height: 20px; animation: spin 1s linear infinite; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .status { font-size: 13px; margin-top: 10px; color: #666; min-height: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h1>Media Downloader</h1>
+<div class="card">
+    <h2><i class="fab fa-tiktok"></i> / <i class="fab fa-facebook"></i> Downloader</h2>
     
-    <div class="input-group">
-        <input type="text" id="urlInput" placeholder="Paste Facebook/TikTok link here...">
-        <button id="checkBtn" onclick="checkLink()">Check</button>
+    <div class="input-box">
+        <input type="text" id="url" placeholder="Dán link TikTok hoặc Facebook vào đây...">
+        <button class="paste-btn" onclick="pasteLink()"><i class="fas fa-paste"></i></button>
     </div>
 
-    <div class="preview" id="previewArea">
-        <img id="thumbnail" src="" alt="Thumbnail">
-        <h3 id="videoTitle"></h3>
+    <div class="preview-area" id="preview">
+        <img id="thumb" src="" alt="">
+        <div class="preview-title" id="vidTitle"></div>
     </div>
 
-    <div class="options" id="downloadOptions">
-        <button class="btn-download btn-video" onclick="downloadMedia('video')">
-            Download Video (MP4)
-        </button>
-        <button class="btn-download btn-audio" onclick="downloadMedia('audio')">
-            Download Audio (MP3)
-        </button>
-    </div>
+    <button class="btn btn-check" id="checkBtn" onclick="fetchInfo()">
+        <span class="btn-text">Lấy Link</span>
+        <div class="loader" id="mainLoader"></div>
+    </button>
 
-    <div id="logs">Waiting for input...</div>
+    <button class="btn btn-dl-video" id="vidBtn" onclick="downloadVideo()">
+        <i class="fas fa-video"></i> Tải Video (MP4)
+    </button>
+
+    <button class="btn btn-dl-audio" id="audBtn" onclick="downloadAudio()">
+        <i class="fas fa-music"></i> Tải Audio (MP3)
+    </button>
+
+    <div class="status" id="statusMsg"></div>
 </div>
 
 <script>
-    const logArea = document.getElementById('logs');
-    const checkBtn = document.getElementById('checkBtn');
-    const optionsDiv = document.getElementById('downloadOptions');
-    const previewDiv = document.getElementById('previewArea');
-    
-    function log(message) {
-        const time = new Date().toLocaleTimeString();
-        logArea.innerText += `[${time}] ${message}\n`;
-        logArea.scrollTop = logArea.scrollHeight;
+    let currentUrl = '';
+
+    async function pasteLink() {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('url').value = text;
+        } catch(e) {}
     }
 
-    async function checkLink() {
-        const url = document.getElementById('urlInput').value.trim();
-        if (!url) return log("Error: Please enter a URL");
-
-        checkBtn.disabled = true;
-        checkBtn.innerText = "Checking...";
-        optionsDiv.style.display = 'none';
-        previewDiv.style.display = 'none';
-        log("Connecting to server to fetch metadata...");
-
-        try {
-            const response = await fetch('/api/info', {
-                headers: { 'Content-Type': 'application/json' },
-                method: 'POST',
-                body: JSON.stringify({ url })
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                log(`Success: Found "${data.title}"`);
-                document.getElementById('thumbnail').src = data.thumbnail;
-                document.getElementById('videoTitle').innerText = data.title;
-                previewDiv.style.display = 'block';
-                optionsDiv.style.display = 'flex';
-                log("Ready for download. Select format below.");
-            } else {
-                log(`Error: ${data.error}`);
-            }
-        } catch (e) {
-            log(`System Error: ${e.message}`);
-        } finally {
+    function setLoading(isLoading) {
+        const loader = document.getElementById('mainLoader');
+        const text = document.querySelector('.btn-check .btn-text');
+        const checkBtn = document.getElementById('checkBtn');
+        
+        if(isLoading) {
+            loader.style.display = 'block';
+            text.style.display = 'none';
+            checkBtn.disabled = true;
+            document.getElementById('statusMsg').innerText = "Đang xử lý...";
+        } else {
+            loader.style.display = 'none';
+            text.style.display = 'block';
             checkBtn.disabled = false;
-            checkBtn.innerText = "Check";
         }
     }
 
-    function downloadMedia(type) {
-        const url = document.getElementById('urlInput').value.trim();
-        log(`Starting ${type} download... Please wait, processing on server.`);
+    function resetUI() {
+        document.getElementById('preview').style.display = 'none';
+        document.getElementById('vidBtn').style.display = 'none';
+        document.getElementById('audBtn').style.display = 'none';
+        document.getElementById('statusMsg').innerText = "";
+    }
+
+    async function fetchInfo() {
+        const url = document.getElementById('url').value.trim();
+        if(!url) return;
         
-        const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&type=${type}`;
+        currentUrl = url;
+        resetUI();
+        setLoading(true);
+
+        try {
+            const res = await fetch('/api/info', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url})
+            });
+            
+            const data = await res.json();
+            
+            if(res.ok) {
+                document.getElementById('thumb').src = data.thumbnail;
+                document.getElementById('vidTitle').innerText = data.title;
+                document.getElementById('preview').style.display = 'block';
+                document.getElementById('vidBtn').style.display = 'flex';
+                document.getElementById('audBtn').style.display = 'flex';
+                document.getElementById('statusMsg').innerText = "Đã tìm thấy! Chọn định dạng để tải.";
+            } else {
+                document.getElementById('statusMsg').innerText = "Lỗi: " + data.error;
+            }
+        } catch(e) {
+            document.getElementById('statusMsg').innerText = "Lỗi kết nối server.";
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function downloadVideo() {
+        // Video tải bằng Direct Link -> Siêu nhanh
+        const btn = document.getElementById('vidBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<div class="loader" style="display:block; border-color: white; border-top-color: transparent;"></div>';
         
-        window.location.href = downloadUrl;
+        try {
+            const res = await fetch('/api/get-video-link', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({url: currentUrl})
+            });
+            const data = await res.json();
+            
+            if(data.downloadUrl) {
+                // Mở link trực tiếp để trình duyệt tự tải
+                const a = document.createElement('a');
+                a.href = data.downloadUrl;
+                a.target = '_blank'; // Mở tab mới để tải (an toàn nhất)
+                a.rel = 'noreferrer';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                document.getElementById('statusMsg').innerText = "Đang tải video...";
+            } else {
+                alert("Không lấy được link tải video.");
+            }
+        } catch(e) {
+            alert("Lỗi khi lấy link tải.");
+        }
+        btn.innerHTML = originalText;
+    }
+
+    function downloadAudio() {
+        // Audio phải qua xử lý server để convert MP3 chuẩn
+        document.getElementById('statusMsg').innerText = "Đang convert sang MP3 (Chờ xíu)...";
+        const dlUrl = `/api/stream-audio?url=${encodeURIComponent(currentUrl)}`;
         
-        setTimeout(() => {
-            log("Browser has started the download stream.");
-            log("If nothing happens, the link might be private or expired.");
-        }, 2000);
+        // Dùng iframe ẩn để trigger download mà không reload trang
+        let hiddenIframe = document.getElementById('hiddenDownloader');
+        if (!hiddenIframe) {
+            hiddenIframe = document.createElement('iframe');
+            hiddenIframe.id = 'hiddenDownloader';
+            hiddenIframe.style.display = 'none';
+            document.body.appendChild(hiddenIframe);
+        }
+        hiddenIframe.src = dlUrl;
     }
 </script>
 
