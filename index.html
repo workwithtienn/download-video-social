@@ -3,79 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Universal Downloader 2025</title>
+    <title>Universal Media Downloader 2025</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f0f2f5; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); width: 100%; max-width: 400px; text-align: center; }
-        input { width: 100%; padding: 12px; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        .btn-group { display: flex; gap: 10px; }
-        button { flex: 1; padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: opacity 0.2s; }
-        .btn-video { background-color: #007bff; color: white; }
-        .btn-audio { background-color: #28a745; color: white; }
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --text: #1e293b;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 { text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem; }
+        .input-group { display: flex; gap: 10px; margin-bottom: 1rem; }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+        }
+        input:focus { border-color: var(--primary); }
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+        }
         button:hover { opacity: 0.9; }
-        button:disabled { background-color: #ccc; cursor: not-allowed; }
-        #status { margin-top: 15px; font-size: 14px; color: #555; text-align: left; white-space: pre-wrap; background: #eee; padding: 10px; border-radius: 6px; display: none; max-height: 150px; overflow-y: auto; }
+        button:disabled { background: #94a3b8; cursor: not-allowed; }
+        
+        .options {
+            display: none;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .btn-download {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+        .btn-video { background: #059669; }
+        .btn-audio { background: #d97706; }
+
+        #logs {
+            margin-top: 1.5rem;
+            background: #1e293b;
+            color: #4ade80;
+            padding: 1rem;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.85rem;
+            height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .preview {
+            margin-bottom: 1rem;
+            text-align: center;
+            display: none;
+        }
+        .preview img {
+            max-width: 100%;
+            border-radius: 8px;
+            max-height: 200px;
+            object-fit: cover;
+        }
+        .preview h3 { font-size: 1rem; margin: 10px 0; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h2>Download Reels & TikTok</h2>
-        <input type="text" id="urlInput" placeholder="Paste Facebook/TikTok link here..." autocomplete="off">
-        <div class="btn-group">
-            <button class="btn-video" onclick="startDownload('video')">Download Video</button>
-            <button class="btn-audio" onclick="startDownload('audio')">Download Audio</button>
-        </div>
-        <div id="status"></div>
+
+<div class="container">
+    <h1>Media Downloader</h1>
+    
+    <div class="input-group">
+        <input type="text" id="urlInput" placeholder="Paste Facebook/TikTok link here...">
+        <button id="checkBtn" onclick="checkLink()">Check</button>
     </div>
 
-    <script>
-        function log(message) {
-            const statusDiv = document.getElementById('status');
-            statusDiv.style.display = 'block';
-            const time = new Date().toLocaleTimeString();
-            statusDiv.innerText = `[${time}] ${message}\n` + statusDiv.innerText;
-        }
+    <div class="preview" id="previewArea">
+        <img id="thumbnail" src="" alt="Thumbnail">
+        <h3 id="videoTitle"></h3>
+    </div>
 
-        async function startDownload(type) {
-            const url = document.getElementById('urlInput').value.trim();
-            if (!url) return alert('Please enter a link first!');
+    <div class="options" id="downloadOptions">
+        <button class="btn-download btn-video" onclick="downloadMedia('video')">
+            Download Video (MP4)
+        </button>
+        <button class="btn-download btn-audio" onclick="downloadMedia('audio')">
+            Download Audio (MP3)
+        </button>
+    </div>
 
-            const btnVideo = document.querySelector('.btn-video');
-            const btnAudio = document.querySelector('.btn-audio');
-            
-            btnVideo.disabled = true;
-            btnAudio.disabled = true;
-            log(`Requesting ${type} download...`);
-            log(`Target: ${url}`);
+    <div id="logs">Waiting for input...</div>
+</div>
 
-            try {
-                const endpoint = `/download?url=${encodeURIComponent(url)}&type=${type}`;
-                
-                log("Connecting to server...");
-                const response = await fetch(endpoint);
+<script>
+    const logArea = document.getElementById('logs');
+    const checkBtn = document.getElementById('checkBtn');
+    const optionsDiv = document.getElementById('downloadOptions');
+    const previewDiv = document.getElementById('previewArea');
+    
+    function log(message) {
+        const time = new Date().toLocaleTimeString();
+        logArea.innerText += `[${time}] ${message}\n`;
+        logArea.scrollTop = logArea.scrollHeight;
+    }
 
-                if (!response.ok) throw new Error("Server error or invalid link.");
+    async function checkLink() {
+        const url = document.getElementById('urlInput').value.trim();
+        if (!url) return log("Error: Please enter a URL");
 
-                log("Stream started. Downloading...");
+        checkBtn.disabled = true;
+        checkBtn.innerText = "Checking...";
+        optionsDiv.style.display = 'none';
+        previewDiv.style.display = 'none';
+        log("Connecting to server to fetch metadata...");
 
-                const blob = await response.blob();
-                const downloadUrl = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = type === 'audio' ? 'audio.mp3' : 'video.mp4';
-                document.body.appendChild(a);
-                a.click();
-                a.remove();
-                window.URL.revokeObjectURL(downloadUrl);
+        try {
+            const response = await fetch('/api/info', {
+                headers: { 'Content-Type': 'application/json' },
+                method: 'POST',
+                body: JSON.stringify({ url })
+            });
 
-                log("Download complete!");
-            } catch (error) {
-                log(`Error: ${error.message}`);
-            } finally {
-                btnVideo.disabled = false;
-                btnAudio.disabled = false;
+            const data = await response.json();
+
+            if (response.ok) {
+                log(`Success: Found "${data.title}"`);
+                document.getElementById('thumbnail').src = data.thumbnail;
+                document.getElementById('videoTitle').innerText = data.title;
+                previewDiv.style.display = 'block';
+                optionsDiv.style.display = 'flex';
+                log("Ready for download. Select format below.");
+            } else {
+                log(`Error: ${data.error}`);
             }
+        } catch (e) {
+            log(`System Error: ${e.message}`);
+        } finally {
+            checkBtn.disabled = false;
+            checkBtn.innerText = "Check";
         }
-    </script>
+    }
+
+    function downloadMedia(type) {
+        const url = document.getElementById('urlInput').value.trim();
+        log(`Starting ${type} download... Please wait, processing on server.`);
+        
+        const downloadUrl = `/api/download?url=${encodeURIComponent(url)}&type=${type}`;
+        
+        window.location.href = downloadUrl;
+        
+        setTimeout(() => {
+            log("Browser has started the download stream.");
+            log("If nothing happens, the link might be private or expired.");
+        }, 2000);
+    }
+</script>
+
 </body>
 </html>
