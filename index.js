@@ -1,82 +1,113 @@
 const express = require('express');
-const path = require('path');
-const youtubedl = require('youtube-dl-exec');
+const { spawn, execSync } = require('child_process');
 const fs = require('fs');
+const path = require('path');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+// --- Tự động cài đặt yt-dlp binary mới nhất ---
+const ytDlpPath = path.join(__dirname, 'yt-dlp');
+try {
+    if (!fs.existsSync(ytDlpPath)) {
+        console.log('Downloading latest yt-dlp...');
+        execSync(`wget https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -O ${ytDlpPath}`);
+        execSync(`chmod +x ${ytDlpPath}`);
+        console.log('yt-dlp installed successfully.');
+    }
+} catch (e) {
+    console.error('Error installing yt-dlp:', e);
+}
+
 app.use(express.json());
 app.use(express.static('public'));
 
-app.post('/api/info', async (req, res) => {
+// API: Lấy thông tin Video
+app.post('/api/info', (req, res) => {
     const { url } = req.body;
-    if (!url) return res.status(400).json({ error: 'URL is required' });
+    if (!url) return res.status(400).json({ error: 'No URL provided' });
 
-    try {
-        const output = await youtubedl(url, {
-            dumpSingleJson: true,
-            noCheckCertificates: true,
-            noWarnings: true,
-            preferFreeFormats: true
-        });
+    // Lấy JSON info nhanh
+    const process = spawn(ytDlpPath, [
+        '--dump-single-json',
+        '--no-warnings',
+        '--no-check-certificate',
+        url
+    ]);
 
-        res.json({
-            title: output.title,
-            thumbnail: output.thumbnail,
-            duration: output.duration,
-            source: output.extractor_key
-        });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to fetch video info. Ensure the link is public.' });
-    }
+    let data = '';
+    process.stdout.on('data', (chunk) => data += chunk);
+    
+    process.on('close', (code) => {
+        if (code !== 0 || !data) return res.status(500).json({ error: 'Invalid link or Private video' });
+        try {
+            const info = JSON.parse(data);
+            res.json({
+                title: info.title,
+                thumbnail: info.thumbnail,
+                duration: info.duration_string,
+                extractor: info.extractor_key
+            });
+        } catch (e) {
+            res.status(500).json({ error: 'Parse error' });
+        }
+    });
 });
 
-app.get('/api/download', async (req, res) => {
-    const { url, type } = req.query;
+// API: Lấy Link tải trực tiếp cho VIDEO (Siêu nhanh)
+app.post('/api/get-video-link', (req, res) => {
+    const { url } = req.body;
+    // Lấy direct URL (-g) thay vì tải file về server
+    const process = spawn(ytDlpPath, [
+        '-g', 
+        '-f', 'best[ext=mp4]/best', // Ưu tiên MP4
+        '--no-warnings',
+        url
+    ]);
 
-    if (!url || !type) return res.status(400).send('Missing parameters');
+    let directLink = '';
+    process.stdout.on('data', (chunk) => directLink += chunk);
 
-    try {
-        const isAudio = type === 'audio';
-        
-        res.header('Content-Disposition', `attachment; filename="download.${isAudio ? 'mp3' : 'mp4'}"`);
-        res.header('Content-Type', isAudio ? 'audio/mpeg' : 'video/mp4');
-
-        const flags = {
-            noCheckCertificates: true,
-            noWarnings: true,
-            output: '-'
-        };
-
-        if (isAudio) {
-            flags.extractAudio = true;
-            flags.audioFormat = 'mp3';
+    process.on('close', (code) => {
+        if (code === 0 && directLink) {
+            res.json({ downloadUrl: directLink.trim() });
         } else {
-            flags.format = 'best[ext=mp4]';
+            res.status(500).json({ error: 'Could not fetch video link' });
         }
-
-        const subprocess = youtubedl.exec(url, flags);
-
-        subprocess.stdout.pipe(res);
-        
-        subprocess.stderr.on('data', (data) => {
-            console.log(`Progress: ${data.toString()}`);
-        });
-
-        subprocess.on('close', () => {
-            res.end();
-        });
-
-    } catch (error) {
-        console.error(error);
-        if (!res.headersSent) {
-            res.status(500).send('Download failed');
-        }
-    }
+    });
 });
 
-app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
+// API: Stream Audio MP3 (Xử lý convert chuẩn)
+app.get('/api/stream-audio', (req, res) => {
+    const url = req.query.url;
+    if (!url) return res.status(400).send('No URL');
+
+    const filename = 'audio_track.mp3';
+    
+    res.header('Content-Disposition', `attachment; filename="${filename}"`);
+    res.header('Content-Type', 'audio/mpeg');
+
+    // Lệnh này lấy source "bestaudio" (nhẹ nhất) -> pipe sang ffmpeg -> mp3
+    // Đảm bảo file nhẹ và đúng định dạng
+    const args = [
+        '--no-check-certificate',
+        '--no-warnings',
+        '-f', 'bestaudio/best', // Chỉ tải luồng âm thanh (nhẹ hều)
+        '-x', // Extract audio
+        '--audio-format', 'mp3',
+        '--audio-quality', '0', // Chất lượng tốt nhất
+        '-o', '-', // Output ra stdout
+        url
+    ];
+
+    const process = spawn(ytDlpPath, args);
+
+    // Pipe dữ liệu thẳng xuống trình duyệt người dùng
+    process.stdout.pipe(res);
+
+    process.stderr.on('data', (d) => console.log(`[Audio Log]: ${d}`));
+    
+    process.on('close', () => res.end());
 });
+
+app.listen(port, () => console.log(`Server ready at ${port}`));
